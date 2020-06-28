@@ -1,3 +1,5 @@
 
 *.csv
 geckodriver.log
+dados/nilc_emeddings/glove_s100.txt
+dados/nilc_emeddings/glove_s100.zip
