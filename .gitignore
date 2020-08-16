@@ -3,3 +3,7 @@
 geckodriver.log
 dados/nilc_emeddings/glove_s100.txt
 dados/nilc_emeddings/glove_s100.zip
+word2vec_stemming.model
+.ipynb_checkpoints/4. modelo_word2vec-checkpoint.ipynb
+dados/corpus_txt/corpus_txt.txt
+word2vec.model
