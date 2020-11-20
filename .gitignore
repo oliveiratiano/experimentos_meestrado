@@ -9,3 +9,4 @@ dados/corpus_txt/corpus_txt.txt
 word2vec.model
 *.txt
 *.model
+*.npy
