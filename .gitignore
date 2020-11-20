@@ -7,3 +7,5 @@ word2vec_stemming.model
 .ipynb_checkpoints/4. modelo_word2vec-checkpoint.ipynb
 dados/corpus_txt/corpus_txt.txt
 word2vec.model
+*.txt
+*.model
