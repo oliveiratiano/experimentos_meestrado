@@ -4,6 +4,7 @@ import re
 import nltk
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import pandas as pd
 import os
 import glob
@@ -63,27 +64,47 @@ def calcular_desempenho(tesauro, modelo, nome_modelo):
     rank_medio_use = sum(df_use.lista_rank.values.sum())/len(df_use.lista_rank.values.sum())
     rank_mediano_use = statistics.median(df_use.lista_rank.values.sum())
     qtde_termos_use = len(df_use.lista_rank.values.sum())
-    display('rank médio use: ' + str(rank_medio_use) + ' - rank mediano use: ' + str(rank_mediano_use) + ' - total: ' + str(qtde_termos_use))
+    desvio_use = statistics.stdev(df_use.lista_rank.values.sum())
+    display('rank médio use: ' + str(rank_medio_use) + 
+        ' - rank mediano use: ' + str(rank_mediano_use) + 
+        ' - desvio padrão use: ' + str(desvio_use) +
+        ' - total: ' + str(qtde_termos_use))
 
     rank_medio_up = sum(df_up.lista_rank.values.sum())/len(df_up.lista_rank.values.sum())
     rank_mediano_up = statistics.median(df_up.lista_rank.values.sum())
     qtde_termos_up = len(df_up.lista_rank.values.sum())
-    display('rank médio up: ' + str(rank_medio_up) + ' - rank mediano up: ' + str(rank_mediano_up) + ' - total: ' + str(qtde_termos_up))
+    desvio_up = statistics.stdev(df_up.lista_rank.values.sum())
+    display('rank médio up: ' + str(rank_medio_up) + 
+        ' - rank mediano up: ' + str(rank_mediano_up) + 
+        ' - desvio padrão up: ' + str(desvio_up) +
+        ' - total: ' + str(qtde_termos_up))
 
     rank_medio_te = sum(df_te.lista_rank.values.sum())/len(df_te.lista_rank.values.sum())
     rank_mediano_te = statistics.median(df_te.lista_rank.values.sum())
     qtde_termos_te = len(df_te.lista_rank.values.sum())
-    display('rank médio te: ' + str(rank_medio_te) + ' - rank mediano te: ' + str(rank_mediano_te) + ' - total: ' + str(qtde_termos_te))
+    desvio_te = statistics.stdev(df_te.lista_rank.values.sum())
+    display('rank médio te: ' + str(rank_medio_te) + 
+        ' - rank mediano te: ' + str(rank_mediano_te) + 
+        ' - desvio padrão te: ' + str(desvio_te) +
+        ' - total: ' + str(qtde_termos_te))
 
     rank_medio_tr = sum(df_tr.lista_rank.values.sum())/len(df_tr.lista_rank.values.sum())
     rank_mediano_tr = statistics.median(df_tr.lista_rank.values.sum())
     qtde_termos_tr = len(df_tr.lista_rank.values.sum())
-    display('rank médio tr: ' + str(rank_medio_tr) + ' - rank mediano tr: ' + str(rank_mediano_tr) + ' - total: ' + str(qtde_termos_tr))
+    desvio_tr = statistics.stdev(df_tr.lista_rank.values.sum())
+    display('rank médio tr: ' + str(rank_medio_tr) + 
+        ' - rank mediano tr: ' + str(rank_mediano_tr) + 
+        ' - desvio padrão tr: ' + str(desvio_tr) +
+        ' - total: ' + str(qtde_termos_tr))
 
     rank_medio_tg = sum(df_tg.lista_rank.values.sum())/len(df_tg.lista_rank.values.sum())
     rank_mediano_tg = statistics.median(df_tg.lista_rank.values.sum())
     qtde_termos_tg = len(df_tg.lista_rank.values.sum())
-    display('rank médio tg: ' + str(rank_medio_tg) + ' - rank mediano tg: ' + str(rank_mediano_tg) + ' - total: ' + str(qtde_termos_tg))
+    desvio_tg = statistics.stdev(df_tg.lista_rank.values.sum())
+    display('rank médio tg: ' + str(rank_medio_tg) + 
+        ' - rank mediano tg: ' + str(rank_mediano_tg) + 
+        ' - desvio padrão tg: ' + str(desvio_tg) +
+        ' - total: ' + str(qtde_termos_tg))
 
     mp =  (len(df_use.lista_rank.values.sum()) * rank_medio_use +
            len(df_up.lista_rank.values.sum()) * rank_medio_up +
@@ -95,6 +116,7 @@ def calcular_desempenho(tesauro, modelo, nome_modelo):
                                                                   len(df_tr.lista_rank.values.sum()) +
                                                                   len(df_tg.lista_rank.values.sum()))
     display('rank médio podenrado ' + nome_modelo + ': ' + str(mp))
+    return([df_use, df_up, df_te, df_tr, df_tg])
 
 def restrict_w2v(w2v, restricted_word_set):
     new_vectors = []
@@ -119,3 +141,38 @@ def restrict_w2v(w2v, restricted_word_set):
     w2v.index2entity = new_index2entity
     w2v.index2word = new_index2entity
     w2v.vectors_norm = new_vectors_norm
+
+
+def plotar_dists(lista_manipulos):
+    lista_rotulos = ['Distribuição de distâncias USE', 
+                'Distribuição de distâncias UP',
+                'Distribuição de distâncias TE',
+                'Distribuição de distâncias TR',
+                'Distribuição de distâncias TG']
+    lista_completa = []
+
+    fig, axs = plt.subplots(2, 3, figsize=(20, 12))
+
+    for i, manipulo in enumerate(lista_manipulos):
+        if i <= 2:
+            lin = 0
+            col = i
+        else:
+            lin = 1
+            col = i-3    
+
+        lista_completa += manipulo.lista_dist.sum()
+        sns.distplot(manipulo.lista_dist.sum(), ax=axs[lin, col]).set(xlim=(-1,1), ylim = (0,2.5))
+        mean = np.mean(manipulo.lista_dist.sum())
+        axs[lin, col].axvline(mean, color='r', linestyle='--')
+        axs[lin, col].text(mean+0.03,0.2,str(round(mean, 2)),rotation=0, color = 'r')
+        axs[lin, col].set_title(lista_rotulos[i])
+
+    sns.distplot(lista_completa, ax=axs[1, 2]).set(xlim=(-1,1), ylim = (0,2.5))
+    mean = np.mean(lista_completa)
+    axs[1, 2].axvline(mean, color='r', linestyle='--')
+    axs[1, 2].text(mean+0.03,0.2,str(round(mean, 2)),rotation=0, color = 'r')
+    axs[1, 2].set_title('Distribuição completa de distâncias')
+
+    for ax in axs.flat:
+        ax.set(xlabel='Similaridade de cosseno', ylabel='Proporção %')
