@@ -175,4 +175,221 @@ def plotar_dists(lista_manipulos):
     axs[1, 2].set_title('Distribuição completa de distâncias')
 
     for ax in axs.flat:
-        ax.set(xlabel='Similaridade de cosseno', ylabel='Proporção %')
+        ax.set(xlabel='Similaridade de cosseno', ylabel='Densidade')
+
+    return fig
+
+def plotar_dists_categoria(lista_manipulos, lista_rotulos):
+
+    fig, axs = plt.subplots(2, 3, figsize=(20, 12))
+
+    for i, manipulo in enumerate(lista_manipulos):
+        if i <= 2:
+            lin = 0
+            col = i
+        else:
+            lin = 1
+            col = i-3    
+
+        sns.distplot(manipulo.lista_dist.sum(), ax=axs[lin, col]).set(xlim=(-1,1), ylim = (0,2.5))
+        mean = np.mean(manipulo.lista_dist.sum())
+        axs[lin, col].axvline(mean, color='r', linestyle='--')
+        axs[lin, col].text(mean+0.03,0.2,str(round(mean, 2)),rotation=0, color = 'r')
+        axs[lin, col].set_title(lista_rotulos[i])
+
+    for ax in axs.flat:
+        ax.set(xlabel='Similaridade de cosseno', ylabel='Densidade')
+    
+    return fig
+
+
+def calcular_venc(dfs_w2v_jur, dfs_ftt_jur, dfs_glv_jur):
+    lista_cats = ['USE', 'UP', 'TE', 'TR', 'TG']
+    df = pd.DataFrame()
+
+    for i in range(0, 5):
+        termos = dfs_glv_jur[i].termo
+        mr_glv_jur = dfs_glv_jur[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+        mr_ftt_jur = dfs_ftt_jur[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+        mr_w2v_jur = dfs_w2v_jur[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+
+        df_jur = pd.DataFrame({'nenhum': [50000]*termos.shape[0], 
+                           'Word2Vec': mr_w2v_jur, 
+                           'FastText': mr_ftt_jur,
+                           'GloVe': mr_glv_jur,
+                           })
+        min_rank_jur = df_jur.idxmin(axis=1)
+        df_c = pd.DataFrame({'termos': termos,
+                               'Word2Vec': mr_w2v_jur, 
+                               'FastText': mr_ftt_jur,
+                               'GloVe': mr_glv_jur,
+                               'vencedor_jur': min_rank_jur,
+                               })
+
+        df_c = df_c[(df_c.vencedor_jur != 'nenhum')]
+        quant_vitorias_jur = df_c.vencedor_jur.value_counts()
+        pct_vitorias_jur = round(df_c.vencedor_jur.value_counts()/df_c.vencedor_jur.value_counts().sum()*100,2)
+       
+        df = pd.concat([df, pd.DataFrame({'# ' + lista_cats[i]: quant_vitorias_jur,
+                                          '% ' + lista_cats[i]: pct_vitorias_jur,})], axis = 1)
+    soma_ftt = (df.loc['FastText', '# USE'] +
+       df.loc['FastText', '# UP'] + 
+       df.loc['FastText', '# TE'] + 
+       df.loc['FastText', '# TR'] + 
+       df.loc['FastText', '# TG'])
+    soma_glv = (df.loc['GloVe', '# USE'] +
+               df.loc['GloVe', '# UP'] + 
+               df.loc['GloVe', '# TE'] + 
+               df.loc['GloVe', '# TR'] + 
+               df.loc['GloVe', '# TG'])
+    soma_w2v = (df.loc['Word2Vec', '# USE'] +
+               df.loc['Word2Vec', '# UP'] + 
+               df.loc['Word2Vec', '# TE'] + 
+               df.loc['Word2Vec', '# TR'] + 
+               df.loc['Word2Vec', '# TG'])
+
+    df.loc['FastText', 'TOTAL'] = soma_ftt
+    df.loc['Word2Vec', 'TOTAL'] = soma_w2v
+    df.loc['GloVe', 'TOTAL'] = soma_glv
+
+    total = soma_ftt + soma_glv + soma_w2v
+    df.loc['FastText', '% TOTAL'] = round((soma_ftt/total)*100, 2)
+    df.loc['Word2Vec', '% TOTAL'] = round((soma_w2v/total)*100, 2)
+    df.loc['GloVe', '% TOTAL'] = round((soma_glv/total)*100, 2)
+    
+    return df
+
+def calcular_venc_global(dfs_w2v_nilc, dfs_ftt_nilc, dfs_glv_nilc, dfs_w2v_jur, dfs_ftt_jur, dfs_glv_jur):
+    lista_cats = ['USE', 'UP', 'TE', 'TR', 'TG']
+    df = pd.DataFrame()
+
+    for i in range(0, 5):
+        termos = dfs_glv_jur[i].termo
+        mr_glv_jur = dfs_glv_jur[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+        mr_ftt_jur = dfs_ftt_jur[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+        mr_w2v_jur = dfs_w2v_jur[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+        mr_glv_nilc = dfs_glv_nilc[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+        mr_ftt_nilc = dfs_ftt_nilc[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+        mr_w2v_nilc = dfs_w2v_nilc[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+
+        df_jur = pd.DataFrame({'nenhum': [50000]*termos.shape[0], 
+                           'Word2Vec_Jur': mr_w2v_jur, 
+                           'FastText_Jur': mr_ftt_jur,
+                           'GloVe_Jur': mr_glv_jur,
+                           'Word2Vec_Hartmann': mr_w2v_nilc, 
+                           'FastText_Hartmann': mr_ftt_nilc,
+                           'GloVe_Hartmann': mr_glv_nilc,
+                           })
+        min_rank_jur = df_jur.idxmin(axis=1)
+        df_c = pd.DataFrame({'termos': termos,
+                               'Word2Vec_Jur': mr_w2v_jur, 
+                               'FastText_Jur': mr_ftt_jur,
+                               'GloVe_Jur': mr_glv_jur,
+                               'Word2Vec_Hartmann': mr_w2v_nilc, 
+                               'FastText_Hartmann': mr_ftt_nilc,
+                               'GloVe_Hartmann': mr_glv_nilc,
+                               'vencedor_jur': min_rank_jur,
+                               })
+
+        df_c = df_c[(df_c.vencedor_jur != 'nenhum')]
+        quant_vitorias_jur = df_c.vencedor_jur.value_counts()
+        pct_vitorias_jur = round(df_c.vencedor_jur.value_counts()/df_c.vencedor_jur.value_counts().sum()*100,2)
+
+        df = pd.concat([df, pd.DataFrame({'# ' + lista_cats[i]: quant_vitorias_jur,
+                                          '% ' + lista_cats[i]: pct_vitorias_jur,})], axis = 1)
+
+    soma_ftt_jur = (df.loc['FastText_Jur', '# USE'] +
+           df.loc['FastText_Jur', '# UP'] + 
+           df.loc['FastText_Jur', '# TE'] + 
+           df.loc['FastText_Jur', '# TR'] + 
+           df.loc['FastText_Jur', '# TG'])
+    soma_glv_jur = (df.loc['GloVe_Jur', '# USE'] +
+               df.loc['GloVe_Jur', '# UP'] + 
+               df.loc['GloVe_Jur', '# TE'] + 
+               df.loc['GloVe_Jur', '# TR'] + 
+               df.loc['GloVe_Jur', '# TG'])
+    soma_w2v_jur = (df.loc['Word2Vec_Jur', '# USE'] +
+               df.loc['Word2Vec_Jur', '# UP'] + 
+               df.loc['Word2Vec_Jur', '# TE'] + 
+               df.loc['Word2Vec_Jur', '# TR'] + 
+               df.loc['Word2Vec_Jur', '# TG'])
+    soma_ftt_nilc = (df.loc['FastText_Hartmann', '# USE'] +
+           df.loc['FastText_Hartmann', '# UP'] + 
+           df.loc['FastText_Hartmann', '# TE'] + 
+           df.loc['FastText_Hartmann', '# TR'] + 
+           df.loc['FastText_Hartmann', '# TG'])
+    soma_glv_nilc = (df.loc['GloVe_Hartmann', '# USE'] +
+               df.loc['GloVe_Hartmann', '# UP'] + 
+               df.loc['GloVe_Hartmann', '# TE'] + 
+               df.loc['GloVe_Hartmann', '# TR'] + 
+               df.loc['GloVe_Hartmann', '# TG'])
+    soma_w2v_nilc = (df.loc['Word2Vec_Hartmann', '# USE'] +
+               df.loc['Word2Vec_Hartmann', '# UP'] + 
+               df.loc['Word2Vec_Hartmann', '# TE'] + 
+               df.loc['Word2Vec_Hartmann', '# TR'] + 
+               df.loc['Word2Vec_Hartmann', '# TG'])
+
+
+    df.loc['FastText_Jur', 'TOTAL'] = soma_ftt_jur
+    df.loc['Word2Vec_Jur', 'TOTAL'] = soma_w2v_jur
+    df.loc['GloVe_Jur', 'TOTAL'] = soma_glv_jur
+    df.loc['FastText_Hartmann', 'TOTAL'] = soma_ftt_nilc
+    df.loc['Word2Vec_Hartmann', 'TOTAL'] = soma_w2v_nilc
+    df.loc['GloVe_Hartmann', 'TOTAL'] = soma_glv_nilc
+
+    total = soma_ftt_jur + soma_w2v_jur + soma_glv_jur + soma_ftt_nilc + soma_w2v_nilc + soma_glv_nilc
+    df.loc['FastText_Jur', '% TOTAL'] = round((soma_ftt_jur/total)*100, 2)
+    df.loc['Word2Vec_Jur', '% TOTAL'] = round((soma_w2v_jur/total)*100, 2)
+    df.loc['GloVe_Jur', '% TOTAL'] = round((soma_glv_jur/total)*100, 2)
+    df.loc['FastText_Hartmann', '% TOTAL'] = round((soma_ftt_nilc/total)*100, 2)
+    df.loc['Word2Vec_Hartmann', '% TOTAL'] = round((soma_w2v_nilc/total)*100, 2)
+    df.loc['GloVe_Hartmann', '% TOTAL'] = round((soma_glv_nilc/total)*100, 2)
+
+
+    return df
+
+def calcular_venc_tecnica(dfs_jur, dfs_nilc):
+    lista_cats = ['USE', 'UP', 'TE', 'TR', 'TG']
+    df = pd.DataFrame()
+
+    for i in range(0, 5):
+        termos = dfs_jur[i].termo
+        mr_jur = dfs_jur[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+        mr_nilc = dfs_nilc[i].lista_rank.apply(lambda x: min(x) if x else 50000)
+
+        df_jur = pd.DataFrame({'nenhum': [50000]*termos.shape[0], 
+                           'Jur': mr_jur, 
+                           'Nilc': mr_nilc,
+                           })
+        min_rank_jur = df_jur.idxmin(axis=1)
+        df_c = pd.DataFrame({'termos': termos,
+                               'Jur': mr_jur, 
+                               'Nilc': mr_nilc,
+                               'vencedor': min_rank_jur,
+                               })
+
+        df_c = df_c[(df_c.vencedor != 'nenhum')]
+        quant_vitorias_jur = df_c.vencedor.value_counts()
+        pct_vitorias_jur = round(df_c.vencedor.value_counts()/df_c.vencedor.value_counts().sum()*100,2)
+       
+        df = pd.concat([df, pd.DataFrame({'# ' + lista_cats[i]: quant_vitorias_jur,
+                                          '% ' + lista_cats[i]: pct_vitorias_jur,})], axis = 1)
+    soma_jur = (df.loc['Jur', '# USE'] +
+       df.loc['Jur', '# UP'] + 
+       df.loc['Jur', '# TE'] + 
+       df.loc['Jur', '# TR'] + 
+       df.loc['Jur', '# TG'])
+    soma_nilc = (df.loc['Nilc', '# USE'] +
+               df.loc['Nilc', '# UP'] + 
+               df.loc['Nilc', '# TE'] + 
+               df.loc['Nilc', '# TR'] + 
+               df.loc['Nilc', '# TG'])
+
+    df.loc['Jur', 'TOTAL'] = soma_jur
+    df.loc['Nilc', 'TOTAL'] = soma_nilc
+
+    total = soma_jur + soma_nilc
+    df.loc['Jur', '% TOTAL'] = round((soma_jur/total)*100, 2)
+    df.loc['Nilc', '% TOTAL'] = round((soma_nilc/total)*100, 2)
+    
+    return df
