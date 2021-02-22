@@ -144,11 +144,11 @@ def restrict_w2v(w2v, restricted_word_set):
 
 
 def plotar_dists(lista_manipulos):
-    lista_rotulos = ['Distribuição de distâncias USE', 
-                'Distribuição de distâncias UP',
-                'Distribuição de distâncias TE',
-                'Distribuição de distâncias TR',
-                'Distribuição de distâncias TG']
+    lista_rotulos = ['Distribuição de similaridades USE', 
+                'Distribuição de similaridades UP',
+                'Distribuição de similaridades TE',
+                'Distribuição de similaridades TR',
+                'Distribuição de similaridades TG']
     lista_completa = []
 
     fig, axs = plt.subplots(2, 3, figsize=(20, 12))
@@ -172,7 +172,7 @@ def plotar_dists(lista_manipulos):
     mean = np.mean(lista_completa)
     axs[1, 2].axvline(mean, color='r', linestyle='--')
     axs[1, 2].text(mean+0.03,0.2,str(round(mean, 2)),rotation=0, color = 'r')
-    axs[1, 2].set_title('Distribuição completa de distâncias')
+    axs[1, 2].set_title('Distribuição completa de similaridades')
 
     for ax in axs.flat:
         ax.set(xlabel='Similaridade de cosseno', ylabel='Densidade')

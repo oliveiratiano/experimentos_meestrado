@@ -10,3 +10,6 @@ word2vec.model
 *.txt
 *.model
 *.npy
+*.pptx
+*.pdf
+*.docx
