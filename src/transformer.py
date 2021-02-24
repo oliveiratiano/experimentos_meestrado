@@ -43,8 +43,7 @@ def transform(documentos_validos, n_experimentos):
         vocab = extrair_vocabulario(base_treino, freq_min, stopwords)
 
         # criando representações para cada experimento
-        criar_repr_agreg(X_treino, X_teste, y_treino, y_teste, vocab, diretorio, exp)
-        start = time.time()
+        criar_repr_agreg(X_treino, X_teste, y_treino, y_teste, vocab, diretorio, exp)        
         end = time.time()
         print('tempo do experimento: ' + str((end - start)/60) +' minutos')  
 
@@ -218,6 +217,7 @@ def calc_vet_soma(serie_documentos, modelo, vocab):
 def criar_representacoes_soma(X_teste, y_teste, vocab, diretorio, w2v_jur, ftt_jur, glv_jur, w2v_geral, ftt_geral, glv_geral, exp):
     base_teste = pd.DataFrame(X_teste)
     base_teste['id'] = base_teste.id + '.txt'
+    print("recuperando teores da base de teste")
     base_teste['teores'] = [recuperar_teor(x, diretorio) for x in tqdm(base_teste.id)]
     base_teste['assunto'] = y_teste
     docs_teste = base_teste.teores.reset_index().teores
