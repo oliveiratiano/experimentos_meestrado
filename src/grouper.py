@@ -2,11 +2,15 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models import Word2Vec
 from gensim.models import FastText
 from gensim.models.word2vec import LineSentence
+from gensim.test.utils import datapath, get_tmpfile
+from gensim.models import KeyedVectors
+from gensim.scripts.glove2word2vec import glove2word2vec
 import multiprocessing
 import nltk
 import pandas as pd
 from tqdm import tqdm
 import logging
+import subprocess
 
 #recebe o id de um documento e o diretorio onde ele se encontra, como strings
 #retorna o texto contido neste documento
@@ -87,3 +91,32 @@ def treinar_fasttext(corpus, exp):
     model.train(corpus_file=corpus, total_words=total_words, epochs=5)
     model.save("dados/experimento_" + str(exp) + "/ftt_jur.model")
     return model
+
+    
+def treinar_glove(exp):    
+    print("treinando modelo glove")
+    corpus="../mestrado/experimentos_mestrado/dados/experimento_"+str(exp)+"/base_treino_glv.txt"
+    vocab_file="../mestrado/experimentos_mestrado/dados/experimento_"+str(exp)+"/glove_vocab.txt"
+    coocurrence_file="../mestrado/experimentos_mestrado/dados/experimento_"+str(exp)+"/glv_concurrence.bin"
+    coocurrence_shuf_file="../mestrado/experimentos_mestrado/dados/experimento_"+str(exp)+"/glv_concurrence_shuf.bin"
+    save_file="../mestrado/experimentos_mestrado/dados/experimento_"+str(exp)+"/glv_jur"
+    vector_size=100
+    treinar_glove = subprocess.Popen(["bash", "src/glove.sh", corpus, vocab_file, coocurrence_file, coocurrence_shuf_file, save_file, str(vector_size)], 
+                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
+    output, errors = treinar_glove.communicate()
+    treinar_glove.wait()
+
+    print(output)
+    print(errors)
+    print("treinamento concluído")
+
+    glove_file = 'dados/experimento_'+str(exp)+'/glv_jur.txt'
+    tmp_file = get_tmpfile("test_word2vec.txt")
+    _ = glove2word2vec(glove_file, tmp_file)
+    model = KeyedVectors.load_word2vec_format(tmp_file)
+    return(model)
+
+def remover_stopwords(texto, stopwords):
+    tokens = texto.split(" ")
+    tokens_filtrados = [p for p in tokens if not p in stopwords]
+    return (" ").join(tokens_filtrados).strip()
