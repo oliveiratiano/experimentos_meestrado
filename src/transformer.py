@@ -1,4 +1,5 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.preprocessing import normalize
 from gensim.models import Word2Vec
 from gensim.models import FastText
@@ -14,6 +15,38 @@ from tqdm import tqdm_notebook as tqdm
 import logging
 import subprocess
 import os
+import time
+
+#recebe série com ids dos documentos válidos e a quantidade de experimentos que deve ser executada
+#retorna os documentos da base de testes representados como vetores por cada um dos modelos no diretório de dados
+def transform(documentos_validos, n_experimentos):
+    sss = StratifiedShuffleSplit(n_splits=n_experimentos, test_size=0.2, random_state=0)
+    X = documentos_validos.id
+    y = documentos_validos.Assunto
+    stopwords = nltk.corpus.stopwords.words('portuguese')
+    diretorio = "dados/corpus_tratado/"
+
+    #index[0] são os indices de treino, e index[1] são os de teste
+    #i é o código do experimento
+    for i, index in enumerate(sss.split(X, y)):    
+        exp = i+1
+        print("----------------------- EXPERIMENTO "+ str(exp) + " -----------------------")
+        start = time.time()
+        X_treino, X_teste = X[index[0]], X[index[1]]
+        y_treino, y_teste = y[index[0]], y[index[1]]  
+
+        # instanciando o corpus do conjunto de treinamento
+        base_treino = criar_base_treino(exp, X_treino, y_treino, diretorio, stopwords)
+
+        # criando vocabulário
+        freq_min = 100
+        vocab = extrair_vocabulario(base_treino, freq_min, stopwords)
+
+        # criando representações para cada experimento
+        criar_repr_agreg(X_treino, X_teste, y_treino, y_teste, vocab, diretorio, exp)
+        start = time.time()
+        end = time.time()
+        print('tempo do experimento: ' + str((end - start)/60) +' minutos')  
 
 #recebe o id de um documento e o diretorio onde ele se encontra, como strings
 #retorna o texto contido neste documento
@@ -202,7 +235,7 @@ def criar_representacoes_soma(X_teste, y_teste, vocab, diretorio, w2v_jur, ftt_j
     print("criando representações glove juridico")
     base_teste['vec_glv_jur_soma'] = calc_vet_soma(docs_teste, glv_jur, vocab)
     base_teste.to_csv('dados/experimento_'+str(exp)+'/vetores_teste.csv', index=False)
-    print('representações criadas com sucesso e disponíveis em dados/experimento_'+str(exp)+'/vet_valid_soma.csv', index=False)
+    print("----------- EXPERIMENTO "+ str(exp) + " CONCLUIDO -----------")
 
 def criar_repr_agreg(X_treino, X_teste, y_treino, y_teste, vocab, diretorio, exp):
     # treinando modelos de dominio juridico
