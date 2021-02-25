@@ -17,36 +17,6 @@ import subprocess
 import os
 import time
 
-#recebe série com ids dos documentos válidos e a quantidade de experimentos que deve ser executada
-#retorna os documentos da base de testes representados como vetores por cada um dos modelos no diretório de dados
-def transform(documentos_validos, n_experimentos):
-    sss = StratifiedShuffleSplit(n_splits=n_experimentos, test_size=0.2, random_state=0)
-    X = documentos_validos.id
-    y = documentos_validos.Assunto
-    stopwords = nltk.corpus.stopwords.words('portuguese')
-    diretorio = "dados/corpus_tratado/"
-
-    #index[0] são os indices de treino, e index[1] são os de teste
-    #i é o código do experimento
-    for i, index in enumerate(sss.split(X, y)):    
-        exp = i+1
-        print("----------------------- EXPERIMENTO "+ str(exp) + " -----------------------")
-        start = time.time()
-        X_treino, X_teste = X[index[0]], X[index[1]]
-        y_treino, y_teste = y[index[0]], y[index[1]]  
-
-        # instanciando o corpus do conjunto de treinamento
-        base_treino = criar_base_treino(exp, X_treino, y_treino, diretorio, stopwords)
-
-        # criando vocabulário
-        freq_min = 100
-        vocab = extrair_vocabulario(base_treino, freq_min, stopwords)
-
-        # criando representações para cada experimento
-        criar_repr_agreg(X_treino, X_teste, y_treino, y_teste, vocab, diretorio, exp)        
-        end = time.time()
-        print('tempo do experimento: ' + str((end - start)/60) +' minutos')  
-
 #recebe o id de um documento e o diretorio onde ele se encontra, como strings
 #retorna o texto contido neste documento
 def recuperar_teor(idx, diretorio):
@@ -156,47 +126,6 @@ def remover_stopwords(texto, stopwords):
     tokens_filtrados = [p for p in tokens if not p in stopwords]
     return (" ").join(tokens_filtrados).strip()
 
-
-
-#recebe o número do experimento e os ids da base de treino
-#cria os arquivos necessários para o treinamento dos modelos
-#retorna a base de treino enriquecida dos teores e dos assuntos
-def criar_base_treino(exp, X_treino, y_treino, diretorio, stopwords):
-    X_treino = pd.DataFrame(X_treino)
-    X_treino['id'] = X_treino.id + '.txt'
-
-
-    print("criando base de treino para o experimento "+str(exp))
-    if not os.path.exists('dados/experimento_'+str(exp)):
-        os.makedirs('dados/experimento_'+str(exp))
-
-    #a base de treino para o word2vec e fasttext deve ter uma frase por linha
-    #a base de treino para o glove deve ter um documento por linha
-    base_treino = open('dados/experimento_'+str(exp)+'/base_treino.txt', 'w+', encoding='utf8')
-    base_treino_glv = open('dados/experimento_'+str(exp)+'/base_treino_glv.txt', 'w+', encoding='utf8')
-    tokens = 0
-    for documento in tqdm(X_treino.id.values):
-        doc = open(diretorio + documento, 'r', encoding='utf8')
-        for frase in doc:
-            base_treino.write(frase)
-            tokens += len(frase.split(" "))
-        doc.close()
-
-        doc = open(diretorio + documento, 'r', encoding='utf8')
-        teor_completo = doc.read().replace('\n', '')
-        teor_completo = remover_stopwords(teor_completo, stopwords)
-        base_treino_glv.write(teor_completo + '\n')
-        doc.close()
-
-    base_treino.close()
-    base_treino_glv.close()
-    print(str(tokens)+ " tokens copiados com sucesso")
-
-    print("preparando documentos para extração do vocabulário:")
-    X_treino['teores'] = [recuperar_teor(x, diretorio) for x in tqdm(X_treino.id)]
-    X_treino['assunto'] = y_treino
-    return X_treino
-
 #recebe uma serie com documentos, um modelo gensim e um conjunto com o vocabulário
 #retorna um vetor numpy com a soma dos vetores dos termos dos documentos que estão vocabulário
 def calc_vet_soma(serie_documentos, modelo, vocab):
@@ -243,10 +172,79 @@ def criar_repr_agreg(X_treino, X_teste, y_treino, y_teste, vocab, diretorio, exp
     ftt_jur = treinar_fasttext('dados/experimento_'+str(exp)+'/base_treino.txt', exp)
     glv_jur = treinar_glove(exp)
     
-    # treinando modelos de dominio juridico
+    # importando modelos de domínio geral
     w2v_geral = KeyedVectors.load_word2vec_format('modelos/w2v_skip_nilc.txt')
     ftt_geral = KeyedVectors.load_word2vec_format('modelos/ftt_skip_nilc.txt')
     glv_geral = KeyedVectors.load_word2vec_format('modelos/glove_nilc.txt')
     
     #criando representações através da soma de vetores
     criar_representacoes_soma(X_teste, y_teste, vocab, diretorio, w2v_jur, ftt_jur, glv_jur, w2v_geral, ftt_geral, glv_geral, exp)
+
+#recebe o número do experimento e os ids da base de treino
+#cria os arquivos necessários para o treinamento dos modelos
+#retorna a base de treino enriquecida dos teores e dos assuntos
+def criar_base_treino(exp, X_treino, y_treino, diretorio, stopwords):
+    X_treino = pd.DataFrame(X_treino)
+    X_treino['id'] = X_treino.id + '.txt'
+
+
+    print("criando base de treino para o experimento "+str(exp))
+    if not os.path.exists('dados/experimento_'+str(exp)):
+        os.makedirs('dados/experimento_'+str(exp))
+
+    #a base de treino para o word2vec e fasttext deve ter uma frase por linha
+    #a base de treino para o glove deve ter um documento por linha
+    base_treino = open('dados/experimento_'+str(exp)+'/base_treino.txt', 'w+', encoding='utf8')
+    base_treino_glv = open('dados/experimento_'+str(exp)+'/base_treino_glv.txt', 'w+', encoding='utf8')
+    tokens = 0
+    for documento in tqdm(X_treino.id.values):
+        doc = open(diretorio + documento, 'r', encoding='utf8')
+        for frase in doc:
+            base_treino.write(frase)
+            tokens += len(frase.split(" "))
+        doc.close()
+
+        doc = open(diretorio + documento, 'r', encoding='utf8')
+        teor_completo = doc.read().replace('\n', '')
+        teor_completo = remover_stopwords(teor_completo, stopwords)
+        base_treino_glv.write(teor_completo + '\n')
+        doc.close()
+
+    base_treino.close()
+    base_treino_glv.close()
+    print(str(tokens)+ " tokens copiados com sucesso")
+
+    print("preparando documentos para extração do vocabulário:")
+    X_treino['teores'] = [recuperar_teor(x, diretorio) for x in tqdm(X_treino.id)]
+    X_treino['assunto'] = y_treino
+    return X_treino
+
+#recebe série com ids dos documentos válidos e a quantidade de experimentos que deve ser executada
+#retorna os documentos da base de testes representados como vetores por cada um dos modelos no diretório de dados
+def transform(documentos_validos, n_experimentos):
+    sss = StratifiedShuffleSplit(n_splits=n_experimentos, test_size=0.2, random_state=0)
+    X = documentos_validos.id
+    y = documentos_validos.Assunto
+    stopwords = nltk.corpus.stopwords.words('portuguese')
+    diretorio = "dados/corpus_tratado/"
+
+    #index[0] são os indices de treino, e index[1] são os de teste
+    #i é o código do experimento
+    for i, index in enumerate(sss.split(X, y)):    
+        exp = i+1
+        print("----------------------- EXPERIMENTO "+ str(exp) + " -----------------------")
+        start = time.time()
+        X_treino, X_teste = X[index[0]], X[index[1]]
+        y_treino, y_teste = y[index[0]], y[index[1]]  
+
+        # instanciando o corpus do conjunto de treinamento
+        base_treino = criar_base_treino(exp, X_treino, y_treino, diretorio, stopwords)
+
+        # criando vocabulário
+        freq_min = 100
+        vocab = extrair_vocabulario(base_treino, freq_min, stopwords)
+
+        # criando representações para cada experimento
+        vetores_teste = criar_repr_agreg(X_treino, X_teste, y_treino, y_teste, vocab, diretorio, exp)        
+        end = time.time()
+        print('tempo do experimento: ' + str((end - start)/60) +' minutos')
