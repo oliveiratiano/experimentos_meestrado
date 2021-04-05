@@ -189,8 +189,11 @@ def criar_representacoes_soma(X_teste, y_teste, vocab, diretorio, w2v_jur, ftt_j
 
 def importar_modelos_nilc(tam_vec):
     # importando modelos de domínio geral
+    print("Importando w2v")
     w2v_geral = KeyedVectors.load_word2vec_format('modelos/'+ str(tam_vec) + '/w2v_skip_nilc.txt')
+    print("Importando ftt")
     ftt_geral = KeyedVectors.load_word2vec_format('modelos/'+ str(tam_vec) + '/ftt_skip_nilc.txt')
+    print("Importando glv")
     glv_geral = KeyedVectors.load_word2vec_format('modelos/'+ str(tam_vec) + '/glove_nilc.txt')
 
     return(w2v_geral, ftt_geral, glv_geral)
@@ -307,6 +310,8 @@ def computar_scores_agrupamento(X, y, dir_experimento, modelo, lista_k):
     return(lista_scores_k)
 
 def gerar_graficos_kmeans(lista_scores_k, dir_experimento, modelo):
+    plt.rcParams.update(plt.rcParamsDefault)
+
     k_vals = [lista_scores_k[i][0] for i in range(1, len(lista_scores_k))]
     sil_scores = [lista_scores_k[i][1] for i in range(1, len(lista_scores_k))]
     ari_vals = [lista_scores_k[i][2] for i in range(1, len(lista_scores_k))]
@@ -422,22 +427,25 @@ def transform_param(documentos_validos, n_experimentos, minfreqs, op_stopwords, 
                             base_teste = pd.read_csv("dados/"+dir_experimento+"/vetores_teste.csv")
                             base_teste['doc2vec_jur'] = [normalize(model.infer_vector(x[0].split(' ')).reshape(1,-1)) for x in base_teste.teores]
                             base_teste.to_csv('dados/experimento_'+str(exp)+'/vetores_teste.csv', index=False)
-
-                            #####MATRIZES DE SIMILARIDADE##############
-                            print('--------- executando analyzer para experimento '+ str(exp)+' ---------')
+                            
                             df = pd.read_csv('dados/'+dir_experimento+'/vetores_teste.csv')
                             for modelo in df.iloc[:,3:]:
+                                #####AGRUPAMENTOS###############
+                                print('--------- Agrupando dados: '+ str(exp)+' ---------')
                                 df[modelo] = df[modelo].apply(lambda x: converter_string_array(x))
+                                X_kmeans = np.stack(df[modelo])
+                                X_kmeans = X_kmeans.reshape(X_kmeans.shape[0], X_kmeans.shape[2])
+                                y_kmeans = df['assunto']
+                                le.fit(y_kmeans)
+                                y_kmeans = le.transform(y_kmeans)
+                                lista_scores_k = computar_scores_agrupamento(X_kmeans, y_kmeans, dir_experimento, modelo, lista_k)
+                                gerar_graficos_kmeans(lista_scores_k, dir_experimento, modelo)
+                                np.save('dados/'+dir_experimento + '/lista_scores_k.npy', lista_scores_k)
+                                
+                                #####MATRIZES DE SIMILARIDADE##############
+                                print('--------- executando analyzer para experimento '+ str(exp)+' ---------')
                                 sim_m = calc_matriz_sim(df[modelo], dir_experimento)
                                 calcular_sim_assuntos(df['assunto'], sim_m, df[modelo].name, dir_experimento)
                                 plt.close()
 
-                                #####AGRUPAMENTOS###############
-                                print('agrupando vetores gerados pelo modelo '+modelo)
-                                X = np.stack(df[modelo])
-                                y = df['assunto']
-                                le.fit(y)
-                                y = le.transform(y)
-                                lista_scores_k = computar_scores_agrupamento(X, y, dir_experimento, modelo, lista_k)
-                                gerar_graficos_kmeans(lista_scores_k, dir_experimento, modelo)                                
-                                np.save('lista_scores_k.npy', lista_scores_k, dtype = 'object')
+                               
