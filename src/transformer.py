@@ -109,7 +109,7 @@ def treinar_word2vec(corpus, exp, tam_vec):
 
 def treinar_fasttext(corpus, exp, tam_vec):    
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-    print("treinando modelo word2vec")
+    print("treinando modelo fasttext")
     model = FastText(size=tam_vec, window=5,                 
                  min_count=5, sg=1, hs=1, iter=10, workers=multiprocessing.cpu_count())
     model.build_vocab(corpus_file=corpus)
@@ -431,7 +431,7 @@ def transform_param(documentos_validos, n_experimentos, minfreqs, op_stopwords, 
                             df = pd.read_csv('dados/'+dir_experimento+'/vetores_teste.csv')
                             for modelo in df.iloc[:,3:]:
                                 #####AGRUPAMENTOS###############
-                                print('--------- Agrupando dados: '+ str(exp)+' ---------')
+                                print('--------- Agrupando dados para o modelo '+ modelo + ' no experimento' +str(exp)+' ---------')
                                 df[modelo] = df[modelo].apply(lambda x: converter_string_array(x))
                                 X_kmeans = np.stack(df[modelo])
                                 X_kmeans = X_kmeans.reshape(X_kmeans.shape[0], X_kmeans.shape[2])
